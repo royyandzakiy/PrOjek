@@ -9,6 +9,8 @@
 <%@page import="java.sql.Connection"%>
 <%@page import="java.sql.ResultSet"%>
 <%@page import="java.sql.DriverManager"%>
+<%@page import="org.json.simple.parser.*"%>
+<%@page import="pack.RESTSend"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <!--<!DOCTYPE html>
 
@@ -61,15 +63,17 @@
     <%
         /* Check the request */
         if (request.getParameter("submit") != null){
+//            out.print("<script>alert('debug');</script>");
             try{
                 /* Consuming API using GET method */
                 String user = request.getParameter("username");
                 String pass = request.getParameter("password");
                 String urlParameter = "username="+user+"&password="+pass;
-                String urlRequest = "http://localhost:8080/IdentService/login?";
+                String urlRequest = "http://localhost:8080/IdentityService/Login";
                 RESTSend consumer = new RESTSend(urlRequest,urlParameter);
                 consumer.sendGet();
                 JSONObject responseJSON = consumer.getJSON();
+                out.print("<script>alert('" + responseJSON +"');</script>");
                 
                 /* Checking the response */
                 String status = (String)responseJSON.get("status");

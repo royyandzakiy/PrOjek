@@ -4,6 +4,7 @@
  * and open the template in the editor.
  */
 
+import pack.RESTSend;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.logging.Level;
@@ -60,7 +61,69 @@ public class LoginServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+        HttpSession session;
+        try(PrintWriter out = response.getWriter()) {
+            out.print("<script>alert('testservlet');</script>");
+            
+            // kirim data login ke Identity Service
+            // validasi token yang didapat ke IdentityService
+            // gunakan username utk masuk ke profile
+
+            String username = request.getParameter("username");
+            String password = request.getParameter("password");
+            
+            // kirim data ke Identity Service, terima JSON berupa token & expiry
+            String URL_Target = "localhost:8080/IdentityService/Login";
+            String URL_Param = "username=" + username + "password=" + password;
+            
+            RESTSend rest = new RESTSend(URL_Target, URL_Param);
+            processRequest(request, response);
+            
+            try {
+                rest.sendPost(); // kirim data, dapat json
+                // --atau langsung kirim ke Servlet
+            } catch (Exception ex) {
+                Logger.getLogger(LoginServlet.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+            // ekstrak info dari JSON. ambil token
+            JSONObject output = rest.getJSON();
+            String success = output.get("success").toString();
+            
+            if (success == "true") {
+                String token = output.get("token").toString();
+                String expiry = output.get("expiry").toString();
+                String name = output.get("name").toString();
+
+                // kirim data ke Identity Service, terima JSON berupa username
+                URL_Target = "localhost:8080/IdentityService/TokenValidator";
+                URL_Param = "token=" + token;
+                rest = new RESTSend(URL_Target, URL_Param);
+                try {
+                    rest.sendPost(); // kirim data, dapat json
+                } catch (Exception ex) {
+                    Logger.getLogger(LoginServlet.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                // ekstrak info dari JSON. ambil keterangan valid
+                output = rest.getJSON();
+
+                String tokenValid = output.get("tokenValid").toString();
+                
+                if (tokenValid == "true") {
+                // simpan token di session
+                    session = request.getSession(false);
+                    session.setAttribute("username", username);
+                    session.setAttribute("token", token);
+                    session.setAttribute("expiry", expiry);
+                    session.setAttribute("name", name);
+                }
+                
+                // masuk ke profile
+                response.sendRedirect("index.jsp");
+            }
+        } catch (JSONException ex) {
+            Logger.getLogger(LoginServlet.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     /**
